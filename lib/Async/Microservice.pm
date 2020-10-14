@@ -189,6 +189,26 @@ including OpenAPI documentation.
 
 See L<https://time.meon.eu/> and L<Async::Microservice::Time> code.
 
+=head2 To bootstrap new async service
+
+Create new package for your APIs from current examples
+C<lib/Async/Microservice/*>. Inside set return value of C<service_name>.
+This string will be used to set process name and to read/locate
+OpenAPI yaml definition for the documentation. Any GET/POST processing
+funtions must be defined in C<get_routes> funtion.
+
+Copy one of the C<bin/*.psgi> update it with your new package name.
+
+Copy one of the C<root/static/*.yaml> to have the same name as
+C<service_name>.
+
+Now you are able to lauch the http service with:
+
+    plackup -Ilib --port 8089 --server Twiggy bin/async-microservice-YOUNAME.psgi
+
+In your broser you can read the OpenAPI documentation: L<http://0.0.0.0:8089/v1/>
+and also use editor to extend it: L<http://0.0.0.0:8089/v1/edit>
+
 =head1 SEE ALSO
 
 OpenAPI Specification: L<https://github.com/OAI/OpenAPI-Specification/tree/master/versions>

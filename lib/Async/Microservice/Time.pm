@@ -141,7 +141,7 @@ Async::Microservice::Time - example time async microservice
 =head1 SYNOPSYS
 
     # can be started using:
-    start_server --port 8085 -- plackup -Ilib --access-log /dev/null --server Twiggy bin/async-microservice-time.psgi
+    plackup --port 8085 -Ilib --access-log /dev/null --server Twiggy bin/async-microservice-time.psgi
 
     curl "http://localhost:8085/v1/hcheck" -H "accept: application/json"
     curl "http://localhost:8085/v1/epoch"  -H "accept: application/json"
@@ -166,26 +166,40 @@ L<Path::Router> configuration for dispatching
 
 =head3 GET_datetime
 
-L<http://time.meon.eu/v1/datetime>
+L<https://time.meon.eu/v1/datetime>
 
 =head3 POST_datetime
 
-    curl -X POST "http://time.meon.eu:8085/v1/datetime" -H  "accept: application/json" -H  "Content-Type: application/json" -d "{\"epoch\":-42}"
+    $ curl -X POST "https://time.meon.eu/v1/datetime" -H  "accept: application/json" -H  "Content-Type: application/json" -d "{\"epoch\":-42}"
+    {
+       "date" : "1969-12-31",
+       "datetime" : "1969-12-31 23:59:18 +0000",
+       "day" : "31",
+       "epoch" : -42,
+       "hour" : "23",
+       "minute" : "59",
+       "month" : "12",
+       "second" : "18",
+       "time" : "23:59:18",
+       "time_zone" : "+0000",
+       "time_zone_name" : "UTC",
+       "year" : "1969"
+    }
 
 =head3 GET_epoch
 
-L<http://time.meon.eu/v1/epoch>
+L<https://time.meon.eu/v1/epoch>
 
 =head3 GET_sleep
 
-L<http://time.meon.eu/v1/sleep?duration=2.5>
+L<https://time.meon.eu/v1/sleep?duration=2.5>
 
-This is the only async reponse method that sleep given (or random)
-number of seconds and only then returns the request response with
-when it started and how long it took. Normally this the same as what
-is in duration parameter, but in case the server is overloaded with
-requests, the event loop may call the timer handler much later than
-the duration. Try:
+This is the only parallel processed reponse method (the other ones are
+pure CPU-only bound) that sleep given (or random) number of seconds and
+only then returns the request response with when it started and how long
+it took. Normally this the same as what is in duration parameter, but in
+case the server is overloaded with requests, the event loop may call the
+timer handler much later than the duration. Try:
 
     ab -n 1000 -c 500 http://localhost:8085/v1/sleep?duration=3
     Connection Times (ms)

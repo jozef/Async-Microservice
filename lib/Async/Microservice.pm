@@ -187,7 +187,7 @@ Async::Microservice - Async HTTP Microservice Moose Role
 This L<Moose::Role> helps to quicly bootstrap async http service that is
 including OpenAPI documentation.
 
-See L<https://time.meon.eu/> and the Perl code L<Async::Microservice::Time>.
+See L<https://time.meon.eu/> and L<Async::Microservice::Time> code.
 
 =head1 SEE ALSO
 

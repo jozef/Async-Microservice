@@ -73,8 +73,8 @@ my $builder = $mb_subclass->new(
     create_readme  => 1,
     meta_merge     => {
         resources => {
-            repository => 'https://github.com/meon/Async-Microservice.git',
-            bugtracker => 'https://github.com/meon/Async-Microservice/issues',
+            repository => 'https://github.com/jozef/Async-Microservice.git',
+            bugtracker => 'https://github.com/jozef/Async-Microservice/issues',
         },
         keywords => [qw/ async asynchronous micro service http plack /],
     },

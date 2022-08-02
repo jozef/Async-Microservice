@@ -65,6 +65,7 @@ my $builder = $mb_subclass->new(
         'namespace::autoclean'       => 0,
         'AnyEvent::Future'           => 0,
         'Future::AsyncAwait'         => 0,
+        'Log::Any'                   => 0,
     },
     script_files   => [qw(
         bin/async-microservice-time.psgi

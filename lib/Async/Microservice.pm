@@ -5,7 +5,7 @@ use warnings;
 use 5.010;
 use utf8;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 use Moose::Role;
 requires qw(get_routes service_name);
@@ -17,6 +17,7 @@ use MooseX::Types::Path::Class;
 use Path::Router;
 use FindBin qw($Bin);
 use Async::MicroserviceReq;
+use Log::Any qw($log);
 
 has 'api_version' => (
     is      => 'ro',
@@ -140,6 +141,7 @@ sub plack_handler {
                             $resp->on_fail(sub {
                                 my ($err_msg) = @_;
                                 $err_msg ||= 'unknown';
+                                $log->errorf('exception while calling "%s": %s', $plack_req->path_info, $err_msg);
                                 $this_req->respond(
                                     503, [], 'internal server error calling '.$func.': ' . $err_msg
                                 );

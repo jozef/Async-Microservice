@@ -113,7 +113,7 @@ sub respond {
         }
         catch {
             $payload =
-                $json->encode(CRS::Exception::Internal->as_data('failed to serialize json: ' . $_));
+                $json->encode('failed to serialize json: ' . $_);
         };
     }
     return $self->plack_respond->([$status, [@no_cache_headers, @$headers], [$payload]]);

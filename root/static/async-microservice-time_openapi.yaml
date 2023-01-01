@@ -2,7 +2,7 @@ openapi: 3.0.0
 info:
   version: '1'
   title: 'Perl Async::Microservice::Time'
-  description: 'demo time service for Async::Microservice'
+  description: 'demo time service for Async::Microservice, supports jsonp with _cb parameter'
   termsOfService: "http://toterms/"
   contact:
     name: Jozef

@@ -1,5 +1,6 @@
 0.03    2022-
     - add logging of internal server error
+    - allow for jsonp style callback
 
 0.02    2021-07-23
     - supports different return values from request handling methods

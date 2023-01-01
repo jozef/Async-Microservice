@@ -24,6 +24,11 @@ has 'api_version' => (
     isa     => 'Int',
     default => 1,
 );
+has 'jsonp' => (
+    is      => 'rw',
+    isa     => 'Str',
+    default => '',
+);
 has 'static_dir' => (
     is       => 'ro',
     isa      => 'Path::Class::Dir',
@@ -74,6 +79,7 @@ sub plack_handler {
         path       => $plack_req->path_info,
         params     => $plack_req->parameters,
         static_dir => $self->static_dir,
+        jsonp      => $self->jsonp,
     );
 
     # set process name and last requested path for debug/troubleshooting
@@ -239,9 +245,9 @@ C<service_name>.
 
 Now you are able to lauch the http service with:
 
-    plackup -Ilib --port 8089 --server Twiggy bin/async-microservice-YOUNAME.psgi
+    plackup -Ilib --port 8089 --server Twiggy bin/async-microservice-YOURNAME.psgi
 
-In your broser you can read the OpenAPI documentation: L<http://0.0.0.0:8089/v1/>
+In your browser you can read the OpenAPI documentation: L<http://0.0.0.0:8089/v1/>
 and also use editor to extend it: L<http://0.0.0.0:8089/v1/edit>
 
 =head1 SEE ALSO

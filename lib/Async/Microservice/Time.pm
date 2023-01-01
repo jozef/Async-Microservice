@@ -10,6 +10,8 @@ with qw(Async::Microservice);
 
 our $VERSION = '0.03';
 
+has '+jsonp' => (default => '_cb');
+
 use DateTime;
 use Time::HiRes qw(time);
 use AnyEvent;

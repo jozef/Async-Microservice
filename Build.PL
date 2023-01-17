@@ -42,6 +42,7 @@ my $builder = $mb_subclass->new(
     configure_requires => {'Module::Build' => '0.36',},
     build_requires     => {
         'Test::Most'           => 0,
+        'Test::Time'           => 0,
         'Path::Class'          => 0,
         'Pod::Simple::Text'    => 0,
         'Test::WWW::Mechanize' => 0,

@@ -1,4 +1,4 @@
-0.03    2022-
+0.03    2024-11-19
     - add logging of internal server error
     - allow for jsonp style callback
 

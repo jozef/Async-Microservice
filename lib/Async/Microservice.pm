@@ -217,7 +217,7 @@ __END__
 
 Async::Microservice - Async HTTP Microservice Moose Role
 
-=head1 SYNOPSYS
+=head1 SYNOPSIS
 
     # lib/Async/Microservice/HelloWorld.pm
     package Async::Microservice::HelloWorld;
@@ -243,8 +243,8 @@ Async::Microservice - Async HTTP Microservice Moose Role
 
 =head1 DESCRIPTION
 
-This L<Moose::Role> helps to quicly bootstrap async http service that is
-including OpenAPI documentation.
+This L<Moose::Role> helps quickly bootstrap an async HTTP service that
+includes OpenAPI documentation.
 
 See L<https://time.meon.eu/> and L<Async::Microservice::Time> code.
 
@@ -254,19 +254,20 @@ Create new package for your APIs from current examples
 C<lib/Async/Microservice/*>. Inside set return value of C<service_name>.
 This string will be used to set process name and to read/locate
 OpenAPI yaml definition for the documentation. Any GET/POST processing
-funtions must be defined in C<get_routes> funtion.
+functions must be defined in the C<get_routes> function.
 
-Copy one of the C<bin/*.psgi> update it with your new package name.
+Copy one of the C<bin/*.psgi> scripts and update it with your new package
+name.
 
 Copy one of the C<root/static/*.yaml> to have the same name as
 C<service_name>.
 
-Now you are able to lauch the http service with:
+Now you are able to launch the HTTP service with:
 
     plackup -Ilib --port 8089 --server Twiggy bin/async-microservice-YOURNAME.psgi
 
 In your browser you can read the OpenAPI documentation: L<http://0.0.0.0:8089/v1/>
-and also use editor to extend it: L<http://0.0.0.0:8089/v1/edit>
+and also use the editor to extend it: L<http://0.0.0.0:8089/v1/edit>
 
 =head1 SEE ALSO
 

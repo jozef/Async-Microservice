@@ -94,7 +94,7 @@ sub respond {
     my %headers_as_hash = map {defined($_) ? lc($_) : $_} @$headers;
     my $content_type;
 
-    if ($self->want_json                      # json wanted via accept headerts
+    if ($self->want_json                      # json wanted via accept headers
         && !ref($payload)                     # payload not a reference
         && !$headers_as_hash{'content-type'}  # and content type is not forced (statics for example)
     ) {
@@ -209,7 +209,7 @@ __END__
 
 Async::MicroserviceReq - async microservice request class
 
-=head1 SYNOPSYS
+=head1 SYNOPSIS
 
     my $this_req  = Async::MicroserviceReq->new(
         method     => $plack_req->method,
@@ -230,8 +230,8 @@ Async::MicroserviceReq - async microservice request class
 =head1 DESCRIPTION
 
 This is an object created for each request handled by L<Async::Microservice>.
-It is passed to all request handling functions as first argument and
-it provides some request info and response helper methods.
+It is passed to all request handling functions as the first argument and
+it provides request information and response helper methods.
 
 =head1 ATTRIBUTES
 
@@ -260,7 +260,7 @@ Send plack response.
 
 Send redirect.
 
-=head2 static($file_name, $content_cb)
+=head2 static_ft($file_name, $content_cb)
 
 Send static file, can be updated/modified using optional callback.
 

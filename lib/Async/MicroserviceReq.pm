@@ -14,6 +14,7 @@ use Try::Tiny;
 use JSON::XS;
 use Plack::MIME;
 use MooseX::Types::Path::Class;
+use Future::AsyncAwait;
 
 our $json             = JSON::XS->new->utf8->pretty->canonical;
 our @no_cache_headers = ('Cache-Control' => 'private, max-age=0', 'Expires' => '-1');
@@ -70,10 +71,12 @@ sub _build_json_content {
 
 sub BUILD {
     $pending_req++;
+    return;
 }
 
 sub DEMOLISH {
     $pending_req--;
+    return;
 }
 
 sub get_pending_req {
@@ -81,8 +84,8 @@ sub get_pending_req {
 }
 
 sub text_plain {
-    my ($self, @text) = @_;
-    return $self->respond(200, [], join("\n", @text));
+    my ( $self, @text ) = @_;
+    return $self->respond( 200, [], join( "\n", ( @text, q{} ) ) );
 }
 
 sub respond {
@@ -151,7 +154,7 @@ sub redirect {
     return $self->respond(302, ["Location" => $location], "redirect to " . $location);
 }
 
-sub static {
+async sub static_ft {
     my ($self, $file_name, $content_cb) = @_;
 
     my $static_file = $self->static_dir->file($file_name)->stringify;
@@ -160,27 +163,40 @@ sub static {
     }
 
     my $content_type = Plack::MIME->mime_type($static_file) || 'text/plain';
-    my ($content) = _fetch_file($static_file);
+    my ($content) = await _fetch_file_ft($static_file)
+        ->catch(sub { return $self->respond(404, [], 'failed to load static file') });
+    return $self->respond(404, [], 'failed to load static file')
+        unless defined($content);
     $content = $content_cb->($content)
         if $content_cb;
 
-    return $self->respond(200, ['Content-Type' => $content_type], $content);
+    return [ 200, [ 'Content-Type' => $content_type ], $content ];
 }
 
-sub _fetch_file {
+sub _fetch_file_ft {
     my ($file) = @_;
 
-    my $filedata = AE::cv;
+    my $aio_load_f = Future->new;
+    $aio_load_f->retain;
     aio_load(
         $file,
         sub {
-            my ($content) = @_
-                or die('failed to slurp "' . $file . '"');
-            $filedata->($content);
+            my ($content) = @_;
+            $aio_load_f->done($content);
         }
     );
 
-    return $filedata->recv;
+    my $fetch_file_ft = Future->new;
+    $aio_load_f->on_done(sub {
+        my ($content) = @_;
+        unless (defined($content)) {
+            $fetch_file_ft->fail('failed to load content of file: ' . $file);
+            return;
+        }
+        $fetch_file_ft->done($content);
+    });
+
+    return $fetch_file_ft;
 }
 
 __PACKAGE__->meta->make_immutable;

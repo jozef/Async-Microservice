@@ -18,6 +18,7 @@ use Path::Router;
 use FindBin qw($Bin);
 use Async::MicroserviceReq;
 use Log::Any qw($log);
+use Future::AsyncAwait;
 
 has 'api_version' => (
     is      => 'ro',
@@ -57,7 +58,13 @@ sub _build_router {
     my ($self) = @_;
 
     my $router = Path::Router->new;
-    my @routes = $self->get_routes();
+    my @routes = (
+        ''                 => { defaults => { GET => 'GET_root_index', }, },
+        'static/:filename' => { defaults => { GET => 'GET_static', }, },
+        'edit'             => { defaults => { GET => 'GET_root_edit', }, },
+        'hcheck'           => { defaults => { GET => 'GET_hcheck', }, },
+        $self->get_routes()
+    );
     while (@routes) {
         my ($path, $opts) = splice(@routes, 0, 2);
         $router->add_route($path, %$opts);
@@ -99,29 +106,6 @@ sub plack_handler {
         # without version path redirect to the latest version
         return $this_req->redirect('/v' . $self->api_version . '/')
             unless $version;
-
-        # handle static/
-        return $this_req->static($1)
-            if ($sub_path_info =~ qr{^/static(/.+)$});
-
-        # dispatch request
-        if ( $sub_path_info eq '/' ) {
-            return $this_req->static( 'index.html',
-                sub { $self->_update_openapi_html(@_) } );
-        }
-        elsif ( $sub_path_info eq '/edit' ) {
-            return $this_req->static('edit.html', sub {$self->_update_openapi_html(@_)});
-        }
-        elsif ( $sub_path_info eq '/hcheck' ) {
-            return $this_req->text_plain(
-                'Service-Name: ' . $self->service_name,
-                "API-Version: " . $self->api_version,
-                'Uptime: ' . ( time() - $start_time ),
-                'Request-Count: ' . $req_count,
-                'Pending-Requests: '
-                    . Async::MicroserviceReq->get_pending_req,
-            );
-        }
 
         if (my $match = $self->router->match($sub_path_info)) {
             my $func = $match->{mapping}->{$this_req->method};
@@ -166,7 +150,7 @@ sub plack_handler {
                 return;
             }
         }
-        return $this_req->respond(404, [], 'not found');
+        return $this_req->respond(404, [], 'path ' . $sub_path_info . ' not found');
     };
 
     return sub {
@@ -193,6 +177,37 @@ sub _update_openapi_html {
     $content =~ s/ASYNC-SERVICE-NAME/$service_name/g;
     return $content;
 }
+
+sub GET_root_index {
+    my ( $self, $this_req ) = @_;
+    return $this_req->static_ft( 'index.html',
+        sub { $self->_update_openapi_html(@_) } );
+}
+
+sub GET_static {
+    my ( $self, $this_req ) = @_;
+    my $filename = $this_req->params->{filename};
+    return $this_req->static_ft($filename);
+}
+
+sub GET_root_edit {
+    my ( $self, $this_req ) = @_;
+    return $this_req->static_ft('edit.html', sub {$self->_update_openapi_html(@_)});
+}
+
+sub GET_hcheck {
+    my ( $self, $this_req ) = @_;
+    return $this_req->text_plain(
+        'Service-Name: ' . $self->service_name,
+        "API-Version: " . $self->api_version,
+        'Uptime: ' . ( time() - $start_time ),
+        'Request-Count: ' . $req_count,
+        'Pending-Requests: '
+            . Async::MicroserviceReq->get_pending_req,
+    );
+}
+
+no Moose::Role;
 
 1;
 

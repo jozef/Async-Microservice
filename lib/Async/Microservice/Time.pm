@@ -8,7 +8,7 @@ use Moose;
 
 with qw(Async::Microservice);
 
-our $VERSION = '0.03';
+our $VERSION = '0.05';
 
 has '+jsonp' => (default => '_cb');
 

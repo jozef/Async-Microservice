@@ -147,89 +147,147 @@ sub text_plain {
     return $self->respond( 200, [], join( "\n", ( @text, q{} ) ) );
 }
 
-sub respond {
-    my ($self, $status, $headers, $payload) = @_;
+sub _should_wrap_payload_as_json {
+    my ( $self, $headers_as_hash, $payload ) = @_;
+    return (
+        $self->want_json
+            && !ref($payload)
+            && !$headers_as_hash->{'content-type'}
+    ) ? 1 : 0;
+}
 
-    my %headers_as_hash = map {defined($_) ? lc($_) : $_} @$headers;
-    my $content_type;
+sub _wrap_payload {
+    my ( $self, $state ) = @_;
 
-    if ($self->want_json                      # json wanted via accept headers
-        && !ref($payload)                     # payload not a reference
-        && !$headers_as_hash{'content-type'}  # and content type is not forced (statics for example)
-    ) {
-        if ($status < 400) {
-            $payload = {'data' => $payload};
-        }
-        else {
-            $payload = {
-                'error' => {
-                    err_status => $status,
-                    err_msg    => $payload,
-                }
-            };
-        }
+    return $state->{payload}
+        unless $self->_should_wrap_payload_as_json(
+        $state->{headers_as_hash}, $state->{payload} );
+
+    if ( $state->{status} < 400 ) {
+        return { 'data' => $state->{payload} };
     }
 
-    # encode any reference as json
-    if (ref($payload)) {
-        try {
-            if (my $jsonp = $self->jsonp) {
-                if (my $js_func = $self->params->{$jsonp}) {
-                    if ($js_func !~ m/^[a-zA-Z_\$][0-9a-zA-Z_\$\.]*$/) {
-                        $status  = 405;
-                        $payload = {
-                            'error' => {
-                                err_status => $status,
-                                err_msg    => 'unsupported call-back function name',
-                            }
-                        };
-                    }
-                    else {
-                        $payload      = sprintf('%s(%s);', $js_func, $json->encode($payload));
-                        $content_type = 'application/javascript';
-                    }
-                }
-            }
-            if (ref($payload)) {
-                $payload      = $json->encode($payload);
-                $content_type = 'application/json';
-            }
+    return {
+        'error' => {
+            err_status => $state->{status},
+            err_msg    => $state->{payload},
         }
-        catch {
-            my $err = $_;
-            $status  = 500;
-            $payload = eval {
-                $json->encode(
-                    {   'error' => {
-                            err_status => $status,
-                            err_msg    => 'failed to serialize response: '
-                                . $err,
-                        }
+    };
+}
+
+sub _encode_jsonp_payload {
+    my ( $self, $state ) = @_;
+
+    if ( my $jsonp = $self->jsonp ) {
+        if ( my $js_func = $self->params->{$jsonp} ) {
+            if ( $js_func !~ m/^[a-zA-Z_\$][0-9a-zA-Z_\$\.]*$/ ) {
+                $state->{status}  = 405;
+                $state->{payload} = {
+                    'error' => {
+                        err_status => $state->{status},
+                        err_msg    => 'unsupported call-back function name',
                     }
-                );
-            } // eval {
-                $json->encode(
-                    {   'error' => {
-                            err_status => $status,
-                            err_msg    =>
-                                'failed to serialize response and error message'
-                        }
-                    }
-                );
-            };
-            if ($payload) {
-                $content_type = 'application/json';
+                };
             }
             else {
-                $payload = 'failed to serialize json';
+                $state->{payload} = sprintf(
+                    '%s(%s);',
+                    $js_func,
+                    $json->encode( $state->{payload} )
+                );
+                $state->{content_type} = 'application/javascript';
             }
-        };
+        }
     }
 
-    push(@$headers, ('Content-Type' => ($content_type || 'text/plain')))
-        unless ($headers_as_hash{'content-type'});
+    return $state;
+}
 
-    return $self->plack_respond->([$status, [@no_cache_headers, @$headers], [$payload]]);
+sub _set_serialization_failure {
+    my ( $self, $state, $err ) = @_;
+
+    $state->{status} = 500;
+    $state->{payload} = eval {
+        $json->encode(
+            {   'error' => {
+                    err_status => $state->{status},
+                    err_msg    => 'failed to serialize response: ' . $err,
+                }
+            }
+        );
+    } // eval {
+        $json->encode(
+            {   'error' => {
+                    err_status => $state->{status},
+                    err_msg    =>
+                        'failed to serialize response and error message',
+                }
+            }
+        );
+    };
+
+    if ( $state->{payload} ) {
+        $state->{content_type} = 'application/json';
+    }
+    else {
+        $state->{payload} = 'failed to serialize json';
+        delete $state->{content_type};
+    }
+
+    return $state;
+}
+
+sub _serialize_payload {
+    my ( $self, $state ) = @_;
+
+    return $state
+        unless ref( $state->{payload} );
+
+    try {
+        $state = $self->_encode_jsonp_payload($state);
+
+        if ( ref( $state->{payload} ) ) {
+            $state->{payload} = $json->encode( $state->{payload} );
+            $state->{content_type} = 'application/json';
+        }
+    }
+    catch {
+        $state = $self->_set_serialization_failure( $state, $_ );
+    };
+
+    return $state;
+}
+
+sub _emit_response {
+    my ( $self, $state ) = @_;
+
+    push(
+        @{ $state->{headers} },
+        ( 'Content-Type' => ( $state->{content_type} || 'text/plain' ) )
+    ) unless ( $state->{headers_as_hash}->{'content-type'} );
+
+    return $self->plack_respond->([
+        $state->{status},
+        [ @no_cache_headers, @{ $state->{headers} } ],
+        [ $state->{payload} ]
+    ]);
+}
+
+sub respond {
+    my ( $self, $status, $headers, $payload ) = @_;
+
+    my %headers_as_hash = map { defined($_) ? lc($_) : $_ } @$headers;
+    my $state = {
+        status          => $status,
+        headers         => $headers,
+        headers_as_hash => \%headers_as_hash,
+        payload         => $payload,
+    };
+
+    $state->{payload} = $self->_wrap_payload($state);
+    $state = $self->_serialize_payload($state);
+
+    return $self->_emit_response($state);
 }
 
 sub redirect {
@@ -337,7 +395,24 @@ Send text plain response.
 
 =head2 respond($status, $headers, $payload)
 
-Send plack response.
+Send a PSGI/Plack response.
+
+C<$headers> must be an array reference of header key/value pairs.
+
+If C<$payload> is not a reference, it is sent as plain text by default.
+When the request C<Accept> header allows JSON and no explicit
+C<Content-Type> header is already present, plain scalar payloads are wrapped
+automatically as JSON:
+
+    { "data": "..." }
+
+For error statuses (C<< $status >= 400 >>), scalar payloads are wrapped as:
+
+    { "error": { err_status => ..., err_msg => ... } }
+
+If C<$payload> is a reference, it is serialized as JSON. When JSONP is
+enabled and a valid callback parameter is present, the response is emitted as
+C<application/javascript> instead of C<application/json>.
 
 =head2 redirect($location_path)
 

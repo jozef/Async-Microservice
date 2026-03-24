@@ -238,4 +238,67 @@ subtest '_build_want_json()' => sub {
     );
 };
 
+subtest 'respond()' => sub {
+    local $Async::MicroserviceReq::json = JSON::XS->new->utf8->canonical;
+    $Async::MicroserviceReq::json = 'suppress used only once warning' if 0;
+    my $assert_respond = sub {
+        my ( $status, $headers, $payload,
+            $exp_status, $exp_headers, $exp_payload, $test_name )
+            = @_;
+        my $plack_respond = sub {
+            my ($resp) = @_;
+            my ( $got_status, $got_headers, $got_payload ) = @$resp;
+            subtest $test_name => sub {
+                is( $got_status, $exp_status, 'status' );
+                eq_or_diff( $got_headers, $exp_headers, 'headers' );
+                my $got_payload_str = join( '', @$got_payload );
+                if ( ref($exp_payload) eq 'Regexp' ) {
+                    like( $got_payload_str, $exp_payload,
+                        'payload matches regex' );
+                }
+                else {
+                    eq_or_diff( $got_payload_str, $exp_payload, 'payload' );
+                }
+            };
+        };
+        my $req = make_req();
+        $req->plack_respond($plack_respond);
+        $req->respond( $status, $headers, $payload );
+    };
+
+    $assert_respond->(
+        200,
+        [],
+        '123', 200,
+        [   @Async::MicroserviceReq::no_cache_headers,
+            'Content-Type' => 'text/plain'
+        ],
+        '123',
+        'text payload'
+    );
+
+    $assert_respond->(
+        200,
+        [],
+        { a => 1 },
+        200,
+        [   @Async::MicroserviceReq::no_cache_headers,
+            'Content-Type' => 'application/json'
+        ],
+        '{"a":1}',
+        'json payload'
+    );
+    $assert_respond->(
+        200,
+        [],
+        { a => bless( {}, 'Testing' ) },
+        500,
+        [   @Async::MicroserviceReq::no_cache_headers,
+            'Content-Type' => 'application/json'
+        ],
+        qr/^\{"error":\{"err_msg":"failed to serialize response: encountered object/,
+        'json payload serialization failure'
+    );
+};
+
 done_testing();

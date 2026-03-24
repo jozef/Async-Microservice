@@ -196,7 +196,33 @@ sub respond {
             }
         }
         catch {
-            $payload = $json->encode('failed to serialize json: ' . $_);
+            my $err = $_;
+            $status  = 500;
+            $payload = eval {
+                $json->encode(
+                    {   'error' => {
+                            err_status => $status,
+                            err_msg    => 'failed to serialize response: '
+                                . $err,
+                        }
+                    }
+                );
+            } // eval {
+                $json->encode(
+                    {   'error' => {
+                            err_status => $status,
+                            err_msg    =>
+                                'failed to serialize response and error message'
+                        }
+                    }
+                );
+            };
+            if ($payload) {
+                $content_type = 'application/json';
+            }
+            else {
+                $payload = 'failed to serialize json';
+            }
         };
     }
 

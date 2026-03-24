@@ -149,6 +149,16 @@ sub plack_handler {
                 }
                 return;
             }
+            else {
+                # Route exists but method not supported
+                my @allowed = grep { defined $match->{mapping}->{$_} }
+                    keys %{ $match->{mapping} };
+                return $this_req->respond(
+                    405,
+                    [ "Allow" => join( ", ", sort @allowed ) ],
+                    'method not allowed'
+                );
+            }
         }
         return $this_req->respond(404, [], 'path ' . $sub_path_info . ' not found');
     };

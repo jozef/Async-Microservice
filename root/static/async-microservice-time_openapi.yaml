@@ -138,6 +138,8 @@ paths:
                   epoch:
                     type: integer
                     example: 1586355387
+        405:
+          $ref: '#/components/responses/Method-Not-Allowed'
         500:
           $ref: '#/components/responses/Internal-Server-Error'
   '/sleep':
@@ -185,6 +187,8 @@ paths:
               example: 'CRS::Somed::Att::Service'
             'application/json':
               example: '{"data": "Service-name: async-microservice-time\nAPI-version: 1\nOK\n"}'
+        405:
+          $ref: '#/components/responses/Method-Not-Allowed'
         503:
           description: 'unhealthy'
           content:
@@ -194,13 +198,27 @@ paths:
               example: '{"data": "shutting down"}'
 components:
   responses:
+    'Method-Not-Allowed':
+      description: 'Method not allowed for this route.'
+      headers:
+        Allow:
+          description: 'Comma-separated list of allowed HTTP methods for the route.'
+          schema:
+            type: string
+            example: 'GET, POST'
+      content:
+        'text/plain':
+          example: 'method not allowed'
+        'application/json':
+          schema:
+            $ref: '#/components/schemas/Error-Response'
     'Internal-Server-Error':
       description: 'Internal server error.'
       content:
         'text/plain':
           example: 'Some exception at lib/Async/Microservice/Time.pm line 42.'
     'Input-Processing-Error':
-      description: 'Input processing error'
+      description: 'Input processing error for a supported HTTP method.'
       content:
         'application/json':
           schema:

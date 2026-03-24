@@ -18,10 +18,15 @@ my $service_url   = $asmi_time_srv->url;
 my $mech          = Test::WWW::Mechanize->new();
 
 subtest '/hcheck' => sub {
-    $mech->get_ok($service_url . 'hcheck', 'get hcheck')
-        or diag($mech->content);
-    $mech->content_like(qr/API-Version:/, 'hcheck content')
-        or diag($mech->content);
+    $mech->get_ok( $service_url . 'hcheck', 'get hcheck' )
+        or diag( $mech->content );
+    $mech->content_like( qr/API-Version:/, 'hcheck content' )
+        or diag( $mech->content );
+
+    $mech->post( $service_url . 'hcheck' );
+    is( $mech->status, 405, 'method not allowed returns 405' );
+    is( $mech->res->header('allow'),
+        'GET', 'method not allowed returns allow header' );
 };
 
 subtest '/static' => sub {

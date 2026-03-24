@@ -110,7 +110,7 @@ async sub GET_sleep {
     my ( $self, $this_req ) = @_;
     my $start_time = time();
     my $sleep_time = ( $this_req->params->{duration} // rand(10) ) + 0;
-    if ( $sleep_time <= 0 ) {
+    if ( ( $sleep_time <= 0 ) || ( $sleep_time > 60 ) ) {
         return [
             405,
             [],

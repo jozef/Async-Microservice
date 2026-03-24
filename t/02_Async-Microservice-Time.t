@@ -89,6 +89,9 @@ subtest '/sleep' => sub {
     cmp_ok(time() - $start_time, '>', 0.09, 'duration waited');
     lives_ok(sub {$dt_data = $json->decode($mech->content)}, 'json content') or diag $mech->content;
     cmp_ok($dt_data->{duration}, '>', 0.09, 'duration returned back in json');
+
+    $mech->get($service_url . 'sleep?duration=61');
+    is($mech->status, 405, 'invalid sleep duration returns 405');
 };
 
 note(sprintf('test "now" is %s', DateTime->now(time_zone => 'UTC')));

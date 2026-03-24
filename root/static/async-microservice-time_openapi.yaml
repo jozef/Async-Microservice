@@ -154,6 +154,7 @@ paths:
             type: number
             default: 'random number < 10 && > 0'
             minimum: 0
+            maximum: 60
             exclusiveMinimum: true
       responses:
         200:

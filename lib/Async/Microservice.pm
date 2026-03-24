@@ -15,7 +15,6 @@ use Try::Tiny;
 use Path::Class qw(dir file);
 use MooseX::Types::Path::Class;
 use Path::Router;
-use FindBin qw($Bin);
 use Async::MicroserviceReq;
 use Log::Any qw($log);
 use Future::AsyncAwait;
@@ -36,7 +35,7 @@ has 'static_dir' => (
     required => 1,
     coerce   => 1,
     default  => sub {
-        my $static_dir = $ENV{STATIC_DIR} // dir($Bin, '..', 'root', 'static');
+        my $static_dir = $ENV{STATIC_DIR};
         die 'static dir "' . $static_dir . '" not found (check $ENV{STATIC_DIR})'
             if !$static_dir || !-d $static_dir;
         return $static_dir;

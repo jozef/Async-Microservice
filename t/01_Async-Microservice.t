@@ -7,12 +7,14 @@ use Test::Most;
 use Test::WWW::Mechanize;
 
 use FindBin qw($Bin);
-use Path::Class qw(file);
+use Path::Class qw(file dir);
 use lib file($Bin, 'tlib')->stringify;
 use JSON;
 
 use_ok('Async::Microservice::HelloWorld')     or die;
 use_ok('Test::Async::Microservice::HelloWorld') or die;
+
+$ENV{STATIC_DIR} = dir( $Bin, '..', 'root', 'static' )->stringify;
 
 my $asmi_time_srv = Test::Async::Microservice::HelloWorld->start;
 my $service_url   = $asmi_time_srv->url;

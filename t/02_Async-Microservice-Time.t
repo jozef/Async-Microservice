@@ -11,13 +11,15 @@ use Test::Time time => 1672164098;  # 2022-12-27T18:01:38
 use Test::WWW::Mechanize;
 
 use FindBin qw($Bin);
-use Path::Class qw(file);
+use Path::Class qw(file dir);
 use lib file($Bin, 'tlib')->stringify;
 
 my $json = JSON::XS->new();
 
 use_ok('Async::Microservice::Time')       or die;
 use_ok('Test::Async::Microservice::Time') or die;
+
+$ENV{STATIC_DIR} = dir( $Bin, '..', 'root', 'static' )->stringify;
 
 my $asmi_time_srv = Test::Async::Microservice::Time->start;
 my $service_url   = $asmi_time_srv->url;

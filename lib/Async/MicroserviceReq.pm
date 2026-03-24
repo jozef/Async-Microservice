@@ -155,22 +155,20 @@ sub redirect {
 }
 
 async sub static_ft {
-    my ($self, $file_name, $content_cb) = @_;
-
-    my $static_file = $self->static_dir->file($file_name)->stringify;
-    unless (-r $static_file) {
-        return $self->respond(404, [], $file_name . ' not found');
-    }
-
+    my ( $self, $file_name, $content_cb ) = @_;
+    my $static_file  = $self->static_dir->file($file_name)->stringify;
     my $content_type = Plack::MIME->mime_type($static_file) || 'text/plain';
-    my ($content) = await _fetch_file_ft($static_file)
-        ->catch(sub { return $self->respond(404, [], 'failed to load static file') });
-    return $self->respond(404, [], 'failed to load static file')
-        unless defined($content);
-    $content = $content_cb->($content)
-        if $content_cb;
-
-    return [ 200, [ 'Content-Type' => $content_type ], $content ];
+    return await _fetch_file_ft($static_file)->then(
+        sub {
+            my ($content) = @_;
+            $content = $content_cb->($content) if $content_cb;
+            return [ 200, [ 'Content-Type' => $content_type ], $content ];
+        }
+    )->catch(
+        sub {
+            return [ 404, [@no_cache_headers], 'no such static file' ];
+        }
+    );
 }
 
 sub _fetch_file_ft {

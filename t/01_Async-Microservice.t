@@ -25,8 +25,11 @@ subtest '/hcheck' => sub {
 };
 
 subtest '/static' => sub {
-    $mech->get_ok($service_url . 'static/async-microservice-time_openapi.yaml',
-        'get OpenAPI config');
+    $mech->get_ok(
+        $service_url . 'static/async-microservice-time_openapi.yaml',
+        'get OpenAPI config' );
+    $mech->get( $service_url . 'static/non-existing-file' );
+    is( $mech->status, 404, 'non-existing file returns 404' );
 };
 
 subtest 'OpenAPI' => sub {

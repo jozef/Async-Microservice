@@ -19,8 +19,9 @@ my $fake_params = bless {}, 'FakeParams';
 # 'using_frontend_proxy' is extracted and passed as its own constructor
 # arg; every other key/value pair becomes an HTTP header.
 sub make_req {
-    my (%args) = @_;
-    my $using_fp = delete $args{using_frontend_proxy} // 0;
+    my (%args)      = @_;
+    my $using_fp    = delete $args{using_frontend_proxy} // 0;
+    my $pending_ref = 0;
     return Async::MicroserviceReq->new(
         method               => 'GET',
         headers              => HTTP::Headers->new(%args),
@@ -28,6 +29,7 @@ sub make_req {
         content              => '',
         params               => $fake_params,
         static_dir           => dir($Bin),
+        pending_ref          => \$pending_ref,
         jsonp                => '',
         using_frontend_proxy => $using_fp,
     );

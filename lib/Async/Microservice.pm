@@ -54,9 +54,9 @@ has 'router' => (
     lazy    => 1,
     builder => '_build_router'
 );
-
-our $start_time = time();
-our $req_count  = 0;
+has 'start_time' => (is => 'ro', default => sub { time() });
+has 'req_count' => (is => 'rw', default => 0);
+has 'pending_req' => (is => 'rw', default => 0);
 
 sub _build_router {
     my ($self) = @_;
@@ -80,7 +80,7 @@ sub _build_router {
 sub plack_handler {
     my ($self, $env) = @_;
 
-    $req_count++;
+    $self->req_count($self->req_count + 1);
 
     my $plack_req = Plack::Request->new($env);
     my $this_req = Async::MicroserviceReq->new(
@@ -92,6 +92,7 @@ sub plack_handler {
         static_dir           => $self->static_dir,
         jsonp                => $self->jsonp,
         using_frontend_proxy => $self->using_frontend_proxy,
+        pending_ref          => \$self->{pending_req},
     );
 
     # set process name and last requested path for debug/troubleshooting
@@ -215,10 +216,10 @@ sub GET_hcheck {
     return $this_req->text_plain(
         'Service-Name: ' . $self->service_name,
         "API-Version: " . $self->api_version,
-        'Uptime: ' . ( time() - $start_time ),
-        'Request-Count: ' . $req_count,
+        'Uptime: ' . ( time() - $self->start_time ),
+        'Request-Count: ' . $self->req_count,
         'Pending-Requests: '
-            . Async::MicroserviceReq->get_pending_req,
+            . $self->pending_req,
     );
 }
 

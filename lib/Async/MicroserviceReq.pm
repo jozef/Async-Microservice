@@ -56,7 +56,11 @@ has 'using_frontend_proxy' => (
     isa     => 'Bool',
     default => 0,
 );
-
+has 'pending_ref' => (
+    is       => 'ro',
+    isa      => 'ScalarRef[Int]',
+    required => 1,
+);
 sub _build_base_url {
     my ($self) = @_;
     return URI->new('/') if !$self->using_frontend_proxy;
@@ -129,17 +133,13 @@ sub _build_json_content {
 }
 
 sub BUILD {
-    $pending_req++;
+    ${ $_[0]->pending_ref }++;
     return;
 }
 
 sub DEMOLISH {
-    $pending_req--;
+    ${ $_[0]->pending_ref }--;
     return;
-}
-
-sub get_pending_req {
-    return $pending_req;
 }
 
 sub text_plain {

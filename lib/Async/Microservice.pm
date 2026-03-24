@@ -5,7 +5,7 @@ use warnings;
 use 5.010;
 use utf8;
 
-our $VERSION = '0.06';
+our $VERSION = '0.07';
 
 use Moose::Role;
 requires qw(get_routes service_name);
@@ -44,6 +44,7 @@ has 'static_dir' => (
     },
     lazy => 1,
 );
+has 'static_path' => ( is => 'ro', isa => 'Str', default => 'static' );
 has 'using_frontend_proxy' => (
     is      => 'ro',
     isa     => 'Bool',
@@ -67,19 +68,29 @@ has 'max_concurrent_requests' => (
     default => 1000,
 );
 
+has 'file_placeholder' => ( is => 'ro', default => 'ASYNC-SERVICE-NAME' );
+
 sub _build_router {
     my ($self) = @_;
 
-    my $router = Path::Router->new;
-    my @routes = (
-        ''                 => { defaults => { GET => 'GET_root_index', }, },
-        'static/:filename' => { defaults => { GET => 'GET_static', }, },
-        'edit'             => { defaults => { GET => 'GET_root_edit', }, },
-        'hcheck'           => { defaults => { GET => 'GET_hcheck', }, },
-        $self->get_routes()
+    my $get_static_path = $self->static_path . '/:filename';
+    my $router          = Path::Router->new;
+    my @default_routes  = (
+        ''               => { defaults => { GET => 'GET_root_index', }, },
+        $get_static_path => { defaults => { GET => 'GET_static', }, },
+        'edit'           => { defaults => { GET => 'GET_root_edit', }, },
+        'hcheck'         => { defaults => { GET => 'GET_hcheck', }, },
     );
+    my @routes = ( $self->get_routes() );
     while (@routes) {
         my ( $path, $opts ) = splice( @routes, 0, 2 );
+        $router->add_route( $path, %$opts );
+    }
+
+    # skip default routes if they are already defined in get_routes
+    while (@default_routes) {
+        my ( $path, $opts ) = splice( @default_routes, 0, 2 );
+        next if $router->match($path);
         $router->add_route( $path, %$opts );
     }
 
@@ -212,8 +223,9 @@ sub plack_handler {
 
 sub _update_openapi_html {
     my ( $self, $content ) = @_;
-    my $service_name = $self->service_name;
-    $content =~ s/ASYNC-SERVICE-NAME/$service_name/g;
+    my $service_name             = $self->service_name;
+    my $service_name_placeholder = $self->file_placeholder;
+    $content =~ s/$service_name_placeholder/$service_name/g;
     return $content;
 }
 
@@ -286,6 +298,38 @@ This L<Moose::Role> helps quickly bootstrap an async HTTP service that
 includes OpenAPI documentation.
 
 See L<https://time.meon.eu/> and the code in L<Async::Microservice::Time>.
+
+=head1 ATTRIBUTES
+
+=head2 static_path
+
+URL path prefix for OpenAPI files. Defaults to C<'static'>. Can be overridden
+by passing it to the constructor.
+
+=head2 file_placeholder
+
+Placeholder string used in OpenAPI files (like C<index.html> and C<edit.html>)
+that gets replaced with the service name. Defaults to C<'ASYNC-SERVICE-NAME'>.
+Useful for templates that need to display the service name dynamically.
+
+=head2 Overriding Predefined Paths
+
+The following paths are provided by default:
+
+=over 4
+
+=item * C</> - Root index (OpenAPI documentation)
+
+=item * C</static/:filename> - OpenAPI files
+
+=item * C</edit> - OpenAPI editor
+
+=item * C</hcheck> - Health check endpoint
+
+=back
+
+You can override any of these default routes by defining them in your
+C<get_routes()> method. Your custom routes take precedence over the defaults.
 
 =head2 To bootstrap a new async service
 

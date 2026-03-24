@@ -51,7 +51,9 @@ subtest 'OpenAPI' => sub {
     note($service_url);
     $mech->get_ok($service_url);
     $mech->content_contains( '<div id="swagger-ui">',
-        'OpenAPI documentation in /' );
+        'OpenAPI documentation in /' ) or return;
+    $mech->content_contains( '<title>OpenAPI - asmi-helloworld</title>',
+        'OpenAPI documentation updated' );
     $mech->get_ok( $service_url . 'edit' );
     $mech->content_contains( '<div id="swagger-editor">',
         'OpenAPI editor in /edit' );

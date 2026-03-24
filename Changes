@@ -1,3 +1,8 @@
+0.07    2026-03-24
+    - add file_placeholder attribute for template files substitution
+    - add static_path attribute for configurable url path
+    - allow predefined paths (/, /static, /edit, /hcheck) to be overridden
+
 0.06    2026-03-24
     - log error about too long requests
     - add max sleep duration, prevent DoS

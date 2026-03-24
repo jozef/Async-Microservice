@@ -15,22 +15,34 @@ use JSON::XS;
 use Plack::MIME;
 use MooseX::Types::Path::Class;
 use Future::AsyncAwait;
-use Log::Any qw($log);
+use Log::Any        qw($log);
 use HTTP::Negotiate qw(choose);
 
-our $json             = JSON::XS->new->utf8->pretty->canonical;
-our @no_cache_headers = ('Cache-Control' => 'private, max-age=0', 'Expires' => '-1');
-our $pending_req      = 0;
+our $json = JSON::XS->new->utf8->pretty->canonical;
+our @no_cache_headers =
+    ( 'Cache-Control' => 'private, max-age=0', 'Expires' => '-1' );
+our $pending_req = 0;
 
-has 'method'  => (is => 'ro', isa => 'Str',    required => 1);
-has 'headers' => (is => 'ro', isa => 'Object', required => 1);
-has 'path'    => (is => 'ro', isa => 'Str',    required => 1);
-has 'content' => (is => 'ro', isa => 'Str',    required => 1);
-has 'json_content' =>
-    (is => 'ro', isa => 'Ref', required => 0, lazy => 1, builder => '_build_json_content');
-has 'params'        => (is => 'ro', isa => 'Object',           required => 1);
-has 'plack_respond' => (is => 'rw', isa => 'CodeRef',          required => 0, clearer => 'clear_plack_respond');
-has 'static_dir'    => (is => 'ro', isa => 'Path::Class::Dir', required => 1, coerce => 1);
+has 'method'  => ( is => 'ro', isa => 'Str',    required => 1 );
+has 'headers' => ( is => 'ro', isa => 'Object', required => 1 );
+has 'path'    => ( is => 'ro', isa => 'Str',    required => 1 );
+has 'content' => ( is => 'ro', isa => 'Str',    required => 1 );
+has 'json_content' => (
+    is       => 'ro',
+    isa      => 'Ref',
+    required => 0,
+    lazy     => 1,
+    builder  => '_build_json_content'
+);
+has 'params' => ( is => 'ro', isa => 'Object', required => 1 );
+has 'plack_respond' => (
+    is       => 'rw',
+    isa      => 'CodeRef',
+    required => 0,
+    clearer  => 'clear_plack_respond'
+);
+has 'static_dir' =>
+    ( is => 'ro', isa => 'Path::Class::Dir', required => 1, coerce => 1 );
 
 has 'base_url' => (
     is       => 'ro',
@@ -61,6 +73,7 @@ has 'pending_ref' => (
     isa      => 'ScalarRef[Int]',
     required => 1,
 );
+
 sub _build_base_url {
     my ($self) = @_;
     return URI->new('/') if !$self->using_frontend_proxy;
@@ -78,20 +91,26 @@ sub _build_base_url {
     my $redirect_host;
     my $redirect_port = $default_port;
     if ( $self->headers->header('HTTP_X_FORWARDED_HOST') ) {
+
         # in apache1 ServerName example.com:443
         if ( $self->headers->header('HTTP_X_FORWARDED_SERVER') ) {
-            my ( $host, ) = $self->headers->header('HTTP_X_FORWARDED_SERVER') =~ /([^,\s]+)$/;
+            my ( $host, ) =
+                $self->headers->header('HTTP_X_FORWARDED_SERVER') =~
+                /([^,\s]+)$/;
             if ( $host =~ /^(.+):(\d+)$/ ) {
                 $redirect_port = $2;
                 $host          = $1;
             }
             $redirect_host = $host;
         }
-        my ( $host, ) = $self->headers->header('HTTP_X_FORWARDED_HOST') =~ /([^,\s]+)$/;
+        my ( $host, ) =
+            $self->headers->header('HTTP_X_FORWARDED_HOST') =~ /([^,\s]+)$/;
         if ( $host =~ /^(.+):(\d+)$/ ) {
             $redirect_port = $2;
             $host          = $1;
-        } elsif ( $self->headers->header('HTTP_X_FORWARDED_PORT') ) {
+        }
+        elsif ( $self->headers->header('HTTP_X_FORWARDED_PORT') ) {
+
             # in apache2 httpd.conf (RequestHeader set X-Forwarded-Port 8443)
             $redirect_port = $self->headers->header('HTTP_X_FORWARDED_PORT');
         }
@@ -99,7 +118,9 @@ sub _build_base_url {
     }
 
     unless ($redirect_host) {
-        $log->warn('using front-end proxy but no host information in headers, check if your proxy is configured to send correct headers');
+        $log->warn(
+            'using front-end proxy but no host information in headers, check if your proxy is configured to send correct headers'
+        );
         return URI->new('/');
     }
 
@@ -129,7 +150,7 @@ sub _build_want_json {
 
 sub _build_json_content {
     my ($self) = @_;
-    return $json->decode($self->content);
+    return $json->decode( $self->content );
 }
 
 sub BUILD {
@@ -149,19 +170,17 @@ sub text_plain {
 
 sub _should_wrap_payload_as_json {
     my ( $self, $headers_as_hash, $payload ) = @_;
-    return (
-        $self->want_json
+    return (   $self->want_json
             && !ref($payload)
-            && !$headers_as_hash->{'content-type'}
-    ) ? 1 : 0;
+            && !$headers_as_hash->{'content-type'} ) ? 1 : 0;
 }
 
 sub _wrap_payload {
     my ( $self, $state ) = @_;
 
     return $state->{payload}
-        unless $self->_should_wrap_payload_as_json(
-        $state->{headers_as_hash}, $state->{payload} );
+        unless $self->_should_wrap_payload_as_json( $state->{headers_as_hash},
+        $state->{payload} );
 
     if ( $state->{status} < 400 ) {
         return { 'data' => $state->{payload} };
@@ -190,11 +209,8 @@ sub _encode_jsonp_payload {
                 };
             }
             else {
-                $state->{payload} = sprintf(
-                    '%s(%s);',
-                    $js_func,
-                    $json->encode( $state->{payload} )
-                );
+                $state->{payload} = sprintf( '%s(%s);',
+                    $js_func, $json->encode( $state->{payload} ) );
                 $state->{content_type} = 'application/javascript';
             }
         }
@@ -206,7 +222,7 @@ sub _encode_jsonp_payload {
 sub _set_serialization_failure {
     my ( $self, $state, $err ) = @_;
 
-    $state->{status} = 500;
+    $state->{status}  = 500;
     $state->{payload} = eval {
         $json->encode(
             {   'error' => {
@@ -247,7 +263,7 @@ sub _serialize_payload {
         $state = $self->_encode_jsonp_payload($state);
 
         if ( ref( $state->{payload} ) ) {
-            $state->{payload} = $json->encode( $state->{payload} );
+            $state->{payload}      = $json->encode( $state->{payload} );
             $state->{content_type} = 'application/json';
         }
     }
@@ -266,18 +282,19 @@ sub _emit_response {
         ( 'Content-Type' => ( $state->{content_type} || 'text/plain' ) )
     ) unless ( $state->{headers_as_hash}->{'content-type'} );
 
-    return $self->plack_respond->([
-        $state->{status},
-        [ @no_cache_headers, @{ $state->{headers} } ],
-        [ $state->{payload} ]
-    ]);
+    return $self->plack_respond->(
+        [   $state->{status},
+            [ @no_cache_headers, @{ $state->{headers} } ],
+            [ $state->{payload} ]
+        ]
+    );
 }
 
 sub respond {
     my ( $self, $status, $headers, $payload ) = @_;
 
     my %headers_as_hash = map { defined($_) ? lc($_) : $_ } @$headers;
-    my $state = {
+    my $state           = {
         status          => $status,
         headers         => $headers,
         headers_as_hash => \%headers_as_hash,
@@ -291,10 +308,14 @@ sub respond {
 }
 
 sub redirect {
-    my ($self, $location_path) = @_;
+    my ( $self, $location_path ) = @_;
     my $location = $self->base_url->clone;
     $location->path($location_path);
-    return $self->respond(302, ["Location" => $location], "redirect to " . $location);
+    return $self->respond(
+        302,
+        [ "Location" => $location ],
+        "redirect to " . $location
+    );
 }
 
 async sub static_ft {
@@ -328,14 +349,17 @@ sub _fetch_file_ft {
     );
 
     my $fetch_file_ft = Future->new;
-    $aio_load_f->on_done(sub {
-        my ($content) = @_;
-        unless (defined($content)) {
-            $fetch_file_ft->fail('failed to load content of file: ' . $file);
-            return;
+    $aio_load_f->on_done(
+        sub {
+            my ($content) = @_;
+            unless ( defined($content) ) {
+                $fetch_file_ft->fail(
+                    'failed to load content of file: ' . $file );
+                return;
+            }
+            $fetch_file_ft->done($content);
         }
-        $fetch_file_ft->done($content);
-    });
+    );
 
     return $fetch_file_ft;
 }

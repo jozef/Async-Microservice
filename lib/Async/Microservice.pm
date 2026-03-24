@@ -36,7 +36,9 @@ has 'static_dir' => (
     coerce   => 1,
     default  => sub {
         my $static_dir = $ENV{STATIC_DIR};
-        die 'static dir "' . $static_dir . '" not found (check $ENV{STATIC_DIR})'
+        die 'static dir "'
+            . $static_dir
+            . '" not found (check $ENV{STATIC_DIR})'
             if !$static_dir || !-d $static_dir;
         return $static_dir;
     },
@@ -54,9 +56,9 @@ has 'router' => (
     lazy    => 1,
     builder => '_build_router'
 );
-has 'start_time' => (is => 'ro', default => sub { time() });
-has 'req_count' => (is => 'rw', default => 0);
-has 'pending_req' => (is => 'rw', default => 0);
+has 'start_time'  => ( is => 'ro', default => sub { time() } );
+has 'req_count'   => ( is => 'rw', default => 0 );
+has 'pending_req' => ( is => 'rw', default => 0 );
 
 sub _build_router {
     my ($self) = @_;
@@ -70,20 +72,20 @@ sub _build_router {
         $self->get_routes()
     );
     while (@routes) {
-        my ($path, $opts) = splice(@routes, 0, 2);
-        $router->add_route($path, %$opts);
+        my ( $path, $opts ) = splice( @routes, 0, 2 );
+        $router->add_route( $path, %$opts );
     }
 
     return $router;
 }
 
 sub plack_handler {
-    my ($self, $env) = @_;
+    my ( $self, $env ) = @_;
 
-    $self->req_count($self->req_count + 1);
+    $self->req_count( $self->req_count + 1 );
 
     my $plack_req = Plack::Request->new($env);
-    my $this_req = Async::MicroserviceReq->new(
+    my $this_req  = Async::MicroserviceReq->new(
         method               => $plack_req->method,
         headers              => $plack_req->headers,
         content              => $plack_req->content,
@@ -103,25 +105,23 @@ sub plack_handler {
         $this_req->plack_respond($plack_respond);
 
         # API version
-        my ($version, $sub_path_info);
-        if ($this_req->path =~ qr{^/v(\d+?)(/.*)$}) {
+        my ( $version, $sub_path_info );
+        if ( $this_req->path =~ qr{^/v(\d+?)(/.*)$} ) {
             $version       = $1;
             $sub_path_info = $2;
         }
 
         # without version path redirect to the latest version
-        return $this_req->redirect('/v' . $self->api_version . '/')
+        return $this_req->redirect( '/v' . $self->api_version . '/' )
             unless $version;
 
-        if (my $match = $self->router->match($sub_path_info)) {
-            my $func = $match->{mapping}->{$this_req->method};
-            if ($func && (my $misc_fn = $self->can($func))) {
-                %{$this_req->params} = (
-                    %{$this_req->params},
-                    %{$match->{mapping}}
-                );
-                my $resp = $misc_fn->($self, $this_req, $match);
-                if (blessed($resp) && $resp->isa('Future')) {
+        if ( my $match = $self->router->match($sub_path_info) ) {
+            my $func = $match->{mapping}->{ $this_req->method };
+            if ( $func && ( my $misc_fn = $self->can($func) ) ) {
+                %{ $this_req->params } =
+                    ( %{ $this_req->params }, %{ $match->{mapping} } );
+                my $resp = $misc_fn->( $self, $this_req, $match );
+                if ( blessed($resp) && $resp->isa('Future') ) {
                     $resp->retain;
                     $resp->on_done(
                         sub {
@@ -130,27 +130,31 @@ sub plack_handler {
                                 $this_req->respond(@$resp_data);
                             }
                             else {
-                                $this_req->respond( 200,
-                                    [], $resp_data );
+                                $this_req->respond( 200, [], $resp_data );
                             }
                         }
                     );
-                    $resp->on_fail(sub {
-                        my ($err_msg) = @_;
-                        $err_msg ||= 'unknown';
-                        $log->errorf('exception while calling "%s": %s', $plack_req->path_info, $err_msg);
-                        $this_req->respond(
-                            503, [], 'internal server error calling '.$func.': ' . $err_msg
-                        );
-                    });
-                    $resp->on_cancel(sub {
-                        $this_req->respond(
-                            429, [], 'request for '.$func.' canceled'
-                        );
-                    });
+                    $resp->on_fail(
+                        sub {
+                            my ($err_msg) = @_;
+                            $err_msg ||= 'unknown';
+                            $log->errorf( 'exception while calling "%s": %s',
+                                $plack_req->path_info, $err_msg );
+                            $this_req->respond( 503, [],
+                                      'internal server error calling '
+                                    . $func . ': '
+                                    . $err_msg );
+                        }
+                    );
+                    $resp->on_cancel(
+                        sub {
+                            $this_req->respond( 429, [],
+                                'request for ' . $func . ' canceled' );
+                        }
+                    );
                     return $resp;
                 }
-                elsif (ref($resp) eq 'ARRAY') {
+                elsif ( ref($resp) eq 'ARRAY' ) {
                     $this_req->respond(@$resp);
                 }
                 return;
@@ -166,7 +170,8 @@ sub plack_handler {
                 );
             }
         }
-        return $this_req->respond(404, [], 'path ' . $sub_path_info . ' not found');
+        return $this_req->respond( 404, [],
+            'path ' . $sub_path_info . ' not found' );
     };
 
     return sub {
@@ -188,7 +193,7 @@ sub plack_handler {
 }
 
 sub _update_openapi_html {
-    my ($self, $content) = @_;
+    my ( $self, $content ) = @_;
     my $service_name = $self->service_name;
     $content =~ s/ASYNC-SERVICE-NAME/$service_name/g;
     return $content;
@@ -208,7 +213,8 @@ sub GET_static {
 
 sub GET_root_edit {
     my ( $self, $this_req ) = @_;
-    return $this_req->static_ft('edit.html', sub {$self->_update_openapi_html(@_)});
+    return $this_req->static_ft( 'edit.html',
+        sub { $self->_update_openapi_html(@_) } );
 }
 
 sub GET_hcheck {
@@ -218,8 +224,7 @@ sub GET_hcheck {
         "API-Version: " . $self->api_version,
         'Uptime: ' . ( time() - $self->start_time ),
         'Request-Count: ' . $self->req_count,
-        'Pending-Requests: '
-            . $self->pending_req,
+        'Pending-Requests: ' . $self->pending_req,
     );
 }
 
@@ -306,6 +311,7 @@ code, sending patches, reporting bugs, asking questions, suggesting useful
 advice, nitpicking, chatting on IRC or commenting on my blog (in no particular
 order):
 
+    AI
     you?
 
 Also thanks to my current day-job-employer L<https://www.apa-it.at/>.

@@ -60,6 +60,13 @@ has 'start_time'  => ( is => 'ro', default => sub { time() } );
 has 'req_count'   => ( is => 'rw', default => 0 );
 has 'pending_req' => ( is => 'rw', default => 0 );
 
+has 'request_timeout' => ( is => 'ro', isa => 'Num', default => 300 );
+has 'max_concurrent_requests' => (
+    is      => 'ro',
+    isa     => 'Int',
+    default => 1000,
+);
+
 sub _build_router {
     my ($self) = @_;
 
@@ -95,14 +102,25 @@ sub plack_handler {
         jsonp                => $self->jsonp,
         using_frontend_proxy => $self->using_frontend_proxy,
         pending_ref          => \$self->{pending_req},
+        request_timeout      => $self->request_timeout,
     );
 
     # set process name and last requested path for debug/troubleshooting
-    $0 = $self->service_name . ' ' . $this_req->path;
+    local $0 = sprintf( "%s %s (pending_req: %d)",
+        $self->service_name, $this_req->path, $self->pending_req );
 
     my $plack_handler_sub = sub {
         my ($plack_respond) = @_;
         $this_req->plack_respond($plack_respond);
+
+        # limit number of pending requests
+        if ( $self->pending_req > $self->max_concurrent_requests ) {
+            $log->errorf(
+                'too many concurrent requests (%d), rejecting request for %s',
+                $self->pending_req, $this_req->path
+            );
+            return $this_req->respond( 429, [], 'too many requests' );
+        }
 
         # API version
         my ( $version, $sub_path_info );

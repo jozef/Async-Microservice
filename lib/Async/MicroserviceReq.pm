@@ -17,6 +17,7 @@ use MooseX::Types::Path::Class;
 use Future::AsyncAwait;
 use Log::Any        qw($log);
 use HTTP::Negotiate qw(choose);
+use Scalar::Util    qw(weaken);
 
 our $json = JSON::XS->new->utf8->pretty->canonical;
 our @no_cache_headers =
@@ -73,6 +74,25 @@ has 'pending_ref' => (
     isa      => 'ScalarRef[Int]',
     required => 1,
 );
+has 'request_start' => (
+    is       => 'ro',
+    isa      => 'Num',
+    required => 1,
+    default  => sub { time() },
+);
+has 'request_timeout' => ( is => 'ro', isa => 'Num', required => 1 );
+has '_warn_running_too_long' => (
+    is      => 'ro',
+    isa     => 'ArrayRef',
+    lazy    => 1,
+    builder => '_build_warn_running_too_long'
+);
+
+after 'BUILD' => sub {
+    my ($self) = @_;
+    $self->_warn_running_too_long;    # init timer
+    return;
+};
 
 sub _build_base_url {
     my ($self) = @_;
@@ -134,6 +154,22 @@ sub _build_base_url {
     }
 
     return URI->new( $url_scheme . '://' . $redirect_host_port . '/' );
+}
+
+sub _build_warn_running_too_long {
+    my ($o_self) = @_;
+
+    weaken( my $self = $o_self );
+    return AnyEvent->timer(
+        'after'    => $self->request_timeout,
+        'interval' => $self->request_timeout,
+        'cb'       => sub {
+            $log->errorf(
+                'request %s %s running too long for %d seconds',
+                $self->method, $self->path, ( time - $self->request_start ),
+            );
+        },
+    );
 }
 
 sub _build_want_json {

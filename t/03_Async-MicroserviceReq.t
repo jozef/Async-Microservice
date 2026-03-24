@@ -32,6 +32,7 @@ sub make_req {
         pending_ref          => \$pending_ref,
         jsonp                => '',
         using_frontend_proxy => $using_fp,
+        request_timeout      => 10,
     );
 }
 

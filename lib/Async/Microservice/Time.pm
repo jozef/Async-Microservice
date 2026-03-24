@@ -154,7 +154,7 @@ async sub GET_datetime_span {
         ];
     }
     my $r_age = int($this_req->params->{r_age} // 65);
-    unless ($r_age || ($r_age < 1) || ($r_age > 200)) {
+    unless ($r_age >= 1 && $r_age <= 200) {
         return [
             405,
             [],

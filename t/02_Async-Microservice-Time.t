@@ -132,6 +132,24 @@ subtest '/datetime/span/:s_date (expired)' => sub {
     #~ note(Data::Dumper::Dumper($weeks_data));
 };
 
+subtest '/datetime/span/:s_date r_age range' => sub {
+    for my $invalid_age ( 0, -1, 201 ) {
+        $mech->get(
+            $service_url . 'datetime/span/now?r_age=' . $invalid_age . '' );
+        is( $mech->status, 405,
+            'invalid age ' . $invalid_age . ' returns 405' )
+            or next;
+        my $weeks_data;
+        lives_ok( sub { $weeks_data = $json->decode( $mech->content ) },
+            'json content' )
+            or diag $mech->content;
+        is( $weeks_data->{err_status}, 405, 'error returned' );
+    }
+
+    # max r_age
+    $mech->get_ok( $service_url . 'datetime/span/now?r_age=200' );
+};
+
 subtest '/hcheck' => sub {
     $mech->get_ok($service_url . 'hcheck', 'get hcheck')
         or diag($mech->content);

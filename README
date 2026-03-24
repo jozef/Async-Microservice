@@ -33,6 +33,36 @@ DESCRIPTION
 
     See https://time.meon.eu/ and the code in Async::Microservice::Time.
 
+ATTRIBUTES
+
+ static_path
+
+    URL path prefix for OpenAPI files. Defaults to 'static'. Can be
+    overridden by passing it to the constructor.
+
+ file_placeholder
+
+    Placeholder string used in OpenAPI files (like index.html and
+    edit.html) that gets replaced with the service name. Defaults to
+    'ASYNC-SERVICE-NAME'. Useful for templates that need to display the
+    service name dynamically.
+
+ Overriding Predefined Paths
+
+    The following paths are provided by default:
+
+      * / - Root index (OpenAPI documentation)
+
+      * /static/:filename - OpenAPI files
+
+      * /edit - OpenAPI editor
+
+      * /hcheck - Health check endpoint
+
+    You can override any of these default routes by defining them in your
+    get_routes() method. Your custom routes take precedence over the
+    defaults.
+
  To bootstrap a new async service
 
     Create a new package for your APIs using the current examples in

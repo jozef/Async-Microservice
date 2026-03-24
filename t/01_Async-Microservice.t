@@ -9,6 +9,7 @@ use Test::WWW::Mechanize;
 use FindBin qw($Bin);
 use Path::Class qw(file);
 use lib file($Bin, 'tlib')->stringify;
+use JSON;
 
 use_ok('Async::Microservice::HelloWorld')     or die;
 use_ok('Test::Async::Microservice::HelloWorld') or die;
@@ -50,6 +51,27 @@ subtest 'redirect' => sub {
     $root_url->path('/');
     $mech->get( $root_url, host => 'hackme.example' );
     is( $mech->base, $service_url, 'redirected to root path' );
+};
+
+subtest 'want_json' => sub {
+    subtest 'accept application/json' => sub {
+        my $dt_data;
+        $mech->get( $service_url . 'non-existing',
+            accept => 'application/json;q=1, text/html;q=0.9' );
+        is( $mech->res->header('Content-Type'),
+            'application/json', 'content type is application/json' )
+            or return;
+        lives_ok( sub { $dt_data = JSON->new->decode( $mech->content ) },
+            'json content' )
+            or diag( $mech->content );
+    };
+    subtest 'accept text/html' => sub {
+        my $dt_data;
+        $mech->get( $service_url . 'non-existing', accept => 'text/html' );
+        is( $mech->res->header('Content-Type'),
+            'text/plain', 'content type is text/plain' )
+            or diag( $mech->content );
+    };
 };
 
 done_testing();

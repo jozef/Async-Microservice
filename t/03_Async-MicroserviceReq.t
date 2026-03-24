@@ -196,4 +196,46 @@ subtest '_build_base_url()' => sub {
 
 };
 
+subtest '_build_want_json()' => sub {
+
+    my $assert_want_json = sub {
+        my ( $accept, $expected, $name ) = @_;
+        my %args;
+        $args{Accept} = $accept
+            if defined($accept);
+        my $req = make_req(%args);
+        is( $req->want_json ? 1 : 0, $expected, $name );
+    };
+
+    $assert_want_json->(
+        undef, 0, 'missing Accept header does not request json',
+    );
+
+    $assert_want_json->(
+        'application/json', 1, 'exact application/json requests json',
+    );
+
+    $assert_want_json->( 'application/*', 1, 'application/* requests json', );
+
+    $assert_want_json->( '*/*', 1, '*/* requests json', );
+
+    $assert_want_json->(
+        'application/json;q=0', 0,
+        'application/json with q=0 does not request json',
+    );
+
+    $assert_want_json->(
+        'application/*;q=0', 0,
+        'application/* with q=0 does not request json',
+    );
+
+    $assert_want_json->( '*/*;q=0', 0,
+        '*/* with q=0 does not request json', );
+
+    $assert_want_json->(
+        'text/html;q=1, application/json;q=0',
+        0, 'json explicitly excluded by q=0 does not request json',
+    );
+};
+
 done_testing();

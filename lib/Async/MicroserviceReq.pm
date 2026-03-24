@@ -16,6 +16,7 @@ use Plack::MIME;
 use MooseX::Types::Path::Class;
 use Future::AsyncAwait;
 use Log::Any qw($log);
+use HTTP::Negotiate qw(choose);
 
 our $json             = JSON::XS->new->utf8->pretty->canonical;
 our @no_cache_headers = ('Cache-Control' => 'private, max-age=0', 'Expires' => '-1');
@@ -112,11 +113,14 @@ sub _build_base_url {
 
 sub _build_want_json {
     my ($self) = @_;
-    return (
-        ($self->headers->header('Accept') // '') eq 'application/json'
-        ? 1
-        : 0
-    );
+
+    my $accept = $self->headers->header('Accept');
+    return 0
+        unless defined($accept) && length($accept);
+
+    my $chosen =
+        choose( [ [ 'json', 1.0, 'application/json' ] ], $self->headers, );
+    return defined($chosen) ? 1 : 0;
 }
 
 sub _build_json_content {

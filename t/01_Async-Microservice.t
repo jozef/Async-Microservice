@@ -38,10 +38,18 @@ subtest '/static' => sub {
 };
 
 subtest 'OpenAPI' => sub {
+    note($service_url);
     $mech->get_ok($service_url);
     $mech->content_contains('<div id="swagger-ui">', 'OpenAPI documentation in /');
     $mech->get_ok($service_url.'edit');
     $mech->content_contains('<div id="swagger-editor">', 'OpenAPI editor in /edit');
+};
+
+subtest 'redirect' => sub {
+    my $root_url = URI->new($service_url)->clone;
+    $root_url->path('/');
+    $mech->get( $root_url, host => 'hackme.example' );
+    is( $mech->base, $service_url, 'redirected to root path' );
 };
 
 done_testing();

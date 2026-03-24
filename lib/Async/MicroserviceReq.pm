@@ -15,6 +15,7 @@ use JSON::XS;
 use Plack::MIME;
 use MooseX::Types::Path::Class;
 use Future::AsyncAwait;
+use Log::Any qw($log);
 
 our $json             = JSON::XS->new->utf8->pretty->canonical;
 our @no_cache_headers = ('Cache-Control' => 'private, max-age=0', 'Expires' => '-1');
@@ -49,10 +50,64 @@ has 'jsonp' => (
     isa      => 'Str',
     required => 1,
 );
+has 'using_frontend_proxy' => (
+    is      => 'ro',
+    isa     => 'Bool',
+    default => 0,
+);
 
 sub _build_base_url {
     my ($self) = @_;
-    return URI->new('http://' . $self->headers->header('Host') . '/'),;
+    return URI->new('/') if !$self->using_frontend_proxy;
+
+    my $https_on = '';
+    $https_on = $self->headers->header('HTTP_X_FORWARDED_HTTPS')
+        if $self->headers->header('HTTP_X_FORWARDED_HTTPS');
+    $https_on = 'ON'
+        if $self->headers->header('HTTP_X_FORWARDED_PROTO')
+        && $self->headers->header('HTTP_X_FORWARDED_PROTO') eq
+        'https';    # Pound
+    my $url_scheme = ( $https_on && uc $https_on eq 'ON' ? 'https' : 'http' );
+    my $default_port = $url_scheme eq 'https' ? 443 : 80;
+
+    my $redirect_host;
+    my $redirect_port = $default_port;
+    if ( $self->headers->header('HTTP_X_FORWARDED_HOST') ) {
+        # in apache1 ServerName example.com:443
+        if ( $self->headers->header('HTTP_X_FORWARDED_SERVER') ) {
+            my ( $host, ) = $self->headers->header('HTTP_X_FORWARDED_SERVER') =~ /([^,\s]+)$/;
+            if ( $host =~ /^(.+):(\d+)$/ ) {
+                $redirect_port = $2;
+                $host          = $1;
+            }
+            $redirect_host = $host;
+        }
+        my ( $host, ) = $self->headers->header('HTTP_X_FORWARDED_HOST') =~ /([^,\s]+)$/;
+        if ( $host =~ /^(.+):(\d+)$/ ) {
+            $redirect_port = $2;
+            $host          = $1;
+        } elsif ( $self->headers->header('HTTP_X_FORWARDED_PORT') ) {
+            # in apache2 httpd.conf (RequestHeader set X-Forwarded-Port 8443)
+            $redirect_port = $self->headers->header('HTTP_X_FORWARDED_PORT');
+        }
+        $redirect_host = $host;
+    }
+
+    unless ($redirect_host) {
+        $log->warn('using front-end proxy but no host information in headers, check if your proxy is configured to send correct headers');
+        return URI->new('/');
+    }
+
+    my $redirect_host_port;
+    if (   ( ( $redirect_port eq '80' ) && ( $url_scheme eq 'http' ) )
+        || ( ( $redirect_port eq '443' ) && ( $url_scheme eq 'https' ) ) ) {
+        $redirect_host_port = $redirect_host;
+    }
+    else {
+        $redirect_host_port = $redirect_host . ':' . $redirect_port;
+    }
+
+    return URI->new( $url_scheme . '://' . $redirect_host_port . '/' );
 }
 
 sub _build_want_json {

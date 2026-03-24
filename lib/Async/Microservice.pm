@@ -43,6 +43,11 @@ has 'static_dir' => (
     },
     lazy => 1,
 );
+has 'using_frontend_proxy' => (
+    is      => 'ro',
+    isa     => 'Bool',
+    default => 0,
+);
 
 has 'router' => (
     is      => 'ro',
@@ -79,14 +84,15 @@ sub plack_handler {
     $req_count++;
 
     my $plack_req = Plack::Request->new($env);
-    my $this_req  = Async::MicroserviceReq->new(
-        method     => $plack_req->method,
-        headers    => $plack_req->headers,
-        content    => $plack_req->content,
-        path       => $plack_req->path_info,
-        params     => $plack_req->parameters,
-        static_dir => $self->static_dir,
-        jsonp      => $self->jsonp,
+    my $this_req = Async::MicroserviceReq->new(
+        method               => $plack_req->method,
+        headers              => $plack_req->headers,
+        content              => $plack_req->content,
+        path                 => $plack_req->path_info,
+        params               => $plack_req->parameters,
+        static_dir           => $self->static_dir,
+        jsonp                => $self->jsonp,
+        using_frontend_proxy => $self->using_frontend_proxy,
     );
 
     # set process name and last requested path for debug/troubleshooting

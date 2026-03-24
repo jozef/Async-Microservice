@@ -11,6 +11,9 @@ sub GET_hello {
     my ( $self, $this_req ) = @_;
     return [ 200, [], 'Hello world!' ];
 }
+
+__PACKAGE__->meta->make_immutable;
+no Moose;
 1;
 
 __END__

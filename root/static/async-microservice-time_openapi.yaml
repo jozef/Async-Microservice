@@ -36,7 +36,7 @@ paths:
         500:
           $ref: '#/components/responses/Internal-Server-Error'
     post:
-      description: "Get date-time from epoch"
+      description: "Get date and time from epoch"
       requestBody:
         content:
           'application/json':
@@ -126,7 +126,7 @@ paths:
           $ref: '#/components/responses/Internal-Server-Error'
   '/epoch':
     get:
-      description: 'get number of seconds since 1970-01-01T00:00:00'
+      description: 'Get the number of seconds since 1970-01-01T00:00:00'
       responses:
         200:
           description: 'epoch seconds'
@@ -144,7 +144,7 @@ paths:
           $ref: '#/components/responses/Internal-Server-Error'
   '/sleep':
     get:
-      description: 'Sleep request'
+      description: 'Sleep endpoint'
       parameters:
         - name: duration
           in: query
@@ -185,7 +185,7 @@ paths:
           description: 'healthy'
           content:
             'text/plain':
-              example: 'CRS::Somed::Att::Service'
+              example: 'Async::Microservice::Time'
             'application/json':
               example: '{"data": "Service-name: async-microservice-time\nAPI-version: 1\nOK\n"}'
         405:

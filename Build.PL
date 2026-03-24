@@ -47,6 +47,8 @@ my $builder = $mb_subclass->new(
         'Pod::Simple::Text'    => 0,
         'Test::WWW::Mechanize' => 0,
         'Plack::Test::Server'  => 0,
+        'HTTP::Headers'        => 0,
+        'Log::Any::Test'       => 0,
     },
     requires => {
         'perl'                       => 5.010,

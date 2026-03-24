@@ -5,7 +5,7 @@ use warnings;
 use 5.010;
 use utf8;
 
-our $VERSION = '0.05';
+our $VERSION = '0.06';
 
 use Moose::Role;
 requires qw(get_routes service_name);
@@ -285,28 +285,28 @@ Async::Microservice - Async HTTP Microservice Moose Role
 This L<Moose::Role> helps quickly bootstrap an async HTTP service that
 includes OpenAPI documentation.
 
-See L<https://time.meon.eu/> and L<Async::Microservice::Time> code.
+See L<https://time.meon.eu/> and the code in L<Async::Microservice::Time>.
 
-=head2 To bootstrap new async service
+=head2 To bootstrap a new async service
 
-Create new package for your APIs from current examples
-C<lib/Async/Microservice/*>. Inside set return value of C<service_name>.
-This string will be used to set process name and to read/locate
-OpenAPI yaml definition for the documentation. Any GET/POST processing
-functions must be defined in the C<get_routes> function.
+Create a new package for your APIs using the current examples in
+C<lib/Async/Microservice/*>. Set the return value of C<service_name>.
+This string is used to set the process name and to locate the OpenAPI YAML
+definition for the documentation. Any GET/POST processing functions must be
+defined via C<get_routes>.
 
 Copy one of the C<bin/*.psgi> scripts and update it with your new package
 name.
 
-Copy one of the C<root/static/*.yaml> to have the same name as
-C<service_name>.
+Copy one of C<root/static/*.yaml> and rename it to match C<service_name>.
 
-Now you are able to launch the HTTP service with:
+You can now launch the HTTP service with:
 
     plackup -Ilib --port 8089 --server Twiggy bin/async-microservice-YOURNAME.psgi
 
-In your browser you can read the OpenAPI documentation: L<http://0.0.0.0:8089/v1/>
-and also use the editor to extend it: L<http://0.0.0.0:8089/v1/edit>
+In your browser, you can read the OpenAPI documentation:
+L<http://0.0.0.0:8089/v1/> and use the editor to extend it:
+L<http://0.0.0.0:8089/v1/edit>
 
 =head1 SEE ALSO
 

@@ -5,7 +5,7 @@ use warnings;
 use 5.010;
 use utf8;
 
-our $VERSION = '0.07';
+our $VERSION = '0.08';
 
 use Moose::Role;
 requires qw(get_routes service_name);
@@ -117,7 +117,7 @@ sub plack_handler {
     );
 
     # set process name and last requested path for debug/troubleshooting
-    local $0 = sprintf( "%s %s (pending_req: %d)",
+    $0 = sprintf( "%s %s (pending_req: %d)",
         $self->service_name, $this_req->path, $self->pending_req );
 
     my $plack_handler_sub = sub {

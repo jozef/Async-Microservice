@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use 5.010;
 
-our $VERSION = '0.08';
+our $VERSION = '0.09';
 
 use Moose;
 use namespace::autoclean;

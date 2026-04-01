@@ -9,7 +9,7 @@ use Test::WWW::Mechanize;
 use FindBin     qw($Bin);
 use Path::Class qw(file dir);
 use lib file( $Bin, 'tlib' )->stringify;
-use JSON;
+use JSON::XS;
 
 use_ok('Async::Microservice::HelloWorld')       or die;
 use_ok('Test::Async::Microservice::HelloWorld') or die;
@@ -74,7 +74,7 @@ subtest 'want_json' => sub {
         is( $mech->res->header('Content-Type'),
             'application/json', 'content type is application/json' )
             or return;
-        lives_ok( sub { $dt_data = JSON->new->decode( $mech->content ) },
+        lives_ok( sub { $dt_data = JSON::XS->new->decode( $mech->content ) },
             'json content' )
             or diag( $mech->content );
     };

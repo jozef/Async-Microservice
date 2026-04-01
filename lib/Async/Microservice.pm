@@ -5,7 +5,7 @@ use warnings;
 use 5.010;
 use utf8;
 
-our $VERSION = '0.08';
+our $VERSION = '0.09';
 
 use Moose::Role;
 requires qw(get_routes service_name);

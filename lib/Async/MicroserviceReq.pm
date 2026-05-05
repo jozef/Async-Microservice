@@ -83,7 +83,6 @@ has 'request_start' => (
 has 'request_timeout' => ( is => 'ro', isa => 'Num', required => 1 );
 has '_warn_running_too_long' => (
     is      => 'ro',
-    isa     => 'ArrayRef',
     lazy    => 1,
     builder => '_build_warn_running_too_long'
 );

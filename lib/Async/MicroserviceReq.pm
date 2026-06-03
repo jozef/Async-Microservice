@@ -97,6 +97,24 @@ has 'using_frontend_proxy' => (
     isa     => 'Bool',
     default => sub { $ENV{USING_FRONTEND_PROXY} // 0 },
 );
+has 'server_host' => (
+    is       => 'ro',
+    isa      => 'Maybe[Str]',
+    required => 0,
+    default  => undef,
+);
+has 'server_port' => (
+    is       => 'ro',
+    isa      => 'Maybe[Int]',
+    required => 0,
+    default  => undef,
+);
+has 'server_scheme' => (
+    is       => 'ro',
+    isa      => 'Str',
+    required => 0,
+    default  => 'http',
+);
 has 'pending_ref' => (
     is       => 'ro',
     isa      => 'ScalarRef[Int]',
@@ -149,7 +167,7 @@ sub _build_base_url {
 sub _build_http_base_params {
     my ($self) = @_;
 
-    my $url_scheme = 'http';
+    my $url_scheme = $self->server_scheme || 'http';
     my $redirect_host;
     my $redirect_port = 80;
 
@@ -217,10 +235,17 @@ sub _build_http_base_params {
         }
     }
     else {
-        my ( $host, $port ) = $parse_host_port->( $self->headers->header('Host') );
-        if ($host) {
-            $redirect_host = $host;
-            $redirect_port = $port if defined $port;
+        if ( defined $self->server_host && length $self->server_host ) {
+            $redirect_host = $self->server_host;
+            $redirect_port = $self->server_port if defined $self->server_port;
+        }
+        else {
+            my ( $host, $port ) =
+                $parse_host_port->( $self->headers->header('Host') );
+            if ($host) {
+                $redirect_host = $host;
+                $redirect_port = $port if defined $port;
+            }
         }
     }
 
@@ -519,6 +544,9 @@ it provides request information and response helper methods.
     static_dir
     base_url
     using_frontend_proxy
+    server_host
+    server_port
+    server_scheme
     http_host
     http_port
     http_schema
@@ -567,8 +595,24 @@ When true, C<http_host>, C<http_port>, and C<http_schema> are parsed from
 forwarded headers. If forwarded host headers are missing, parsing falls back
 to C<Host> and emits a warning.
 
-When false, C<http_host> and C<http_port> are parsed from C<Host>, and
-C<http_schema> defaults to C<http>.
+When false, C<http_host>/C<http_port>/C<http_schema> are taken from trusted
+server fields (C<server_host>/C<server_port>/C<server_scheme>) when present,
+otherwise host/port fall back to C<Host> and scheme defaults to C<http>.
+
+=head2 server_host
+
+Trusted server host for non-proxy mode (typically C<SERVER_NAME> from PSGI
+environment).
+
+=head2 server_port
+
+Trusted server port for non-proxy mode (typically C<SERVER_PORT> from PSGI
+environment).
+
+=head2 server_scheme
+
+Trusted server scheme for non-proxy mode (typically C<psgi.url_scheme> from
+PSGI environment).
 
 =head2 http_host
 
@@ -577,7 +621,8 @@ Returns parsed host value used to build C<base_url>.
 When C<using_frontend_proxy> is true, this comes from forwarded host headers,
 with C<Host> fallback and warning if forwarded host headers are missing.
 
-When C<using_frontend_proxy> is false, this comes from C<Host>.
+When C<using_frontend_proxy> is false, this comes from C<server_host> when
+available, otherwise from C<Host>.
 
 =head2 http_port
 
@@ -586,8 +631,8 @@ Returns parsed port value used to build C<base_url>.
 When C<using_frontend_proxy> is true, this comes from forwarded headers
 (or C<Host> fallback when forwarded host headers are missing).
 
-When C<using_frontend_proxy> is false, this comes from C<Host> when present,
-otherwise defaults to C<80>.
+When C<using_frontend_proxy> is false, this comes from C<server_port> when
+available, otherwise from C<Host> when present, else defaults to C<80>.
 
 =head2 http_schema
 
@@ -596,7 +641,7 @@ Returns parsed scheme value used to build C<base_url>.
 When C<using_frontend_proxy> is true, this is derived from forwarded HTTPS/
 proto headers.
 
-When C<using_frontend_proxy> is false, this defaults to C<http>.
+When C<using_frontend_proxy> is false, this comes from C<server_scheme>.
 
 =head2 static_ft($file_name, $content_cb)
 

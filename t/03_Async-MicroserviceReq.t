@@ -21,6 +21,9 @@ my $fake_params = bless {}, 'FakeParams';
 sub make_req {
     my (%args)      = @_;
     my $using_fp    = delete $args{using_frontend_proxy} // 0;
+    my $server_host = delete $args{server_host};
+    my $server_port = delete $args{server_port};
+    my $server_scheme = delete $args{server_scheme};
     my $pending_ref = 0;
     return Async::MicroserviceReq->new(
         method               => 'GET',
@@ -32,6 +35,9 @@ sub make_req {
         pending_ref          => \$pending_ref,
         jsonp                => '',
         using_frontend_proxy => $using_fp,
+        server_host          => $server_host,
+        server_port          => $server_port,
+        server_scheme        => $server_scheme // 'http',
         request_timeout      => 10,
     );
 }
@@ -55,6 +61,18 @@ subtest '_build_base_url()' => sub {
         my $req = make_req( Host => 'service.example.com:8081' );
         is( $req->base_url, 'http://service.example.com:8081/',
             'builds base URL from Host and keeps explicit port',
+        );
+    };
+
+    subtest 'no proxy prefers trusted server host over Host header' => sub {
+        my $req = make_req(
+            Host         => 'hackme.example',
+            server_host  => '127.0.0.1',
+            server_port  => 8080,
+            server_scheme => 'http',
+        );
+        is( $req->base_url, 'http://127.0.0.1:8080/',
+            'trusted server host/port are used in non-proxy mode',
         );
     };
 
@@ -243,6 +261,18 @@ subtest 'http_host/http_port/http_schema accessors' => sub {
         is( $req->http_schema, 'http',                'schema defaults to http' );
         is( $req->http_port,   '8081',                'port from Host header' );
         is( $req->http_host,   'service.example.com', 'host from Host header' );
+    };
+
+    subtest 'non-proxy mode prefers trusted server info over Host header' => sub {
+        my $req = make_req(
+            Host          => 'hackme.example:1234',
+            server_host   => '127.0.0.1',
+            server_port   => 8080,
+            server_scheme => 'http',
+        );
+        is( $req->http_schema, 'http',      'schema from trusted server info' );
+        is( $req->http_port,   '8080',      'port from trusted server info' );
+        is( $req->http_host,   '127.0.0.1', 'host from trusted server info' );
     };
 
     subtest 'parses forwarded host and explicit forwarded port' => sub {

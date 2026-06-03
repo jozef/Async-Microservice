@@ -112,6 +112,9 @@ sub plack_handler {
         static_dir           => $self->static_dir,
         jsonp                => $self->jsonp,
         using_frontend_proxy => $self->using_frontend_proxy,
+        server_host          => $env->{SERVER_NAME},
+        server_port          => $env->{SERVER_PORT},
+        server_scheme        => $env->{'psgi.url_scheme'} || 'http',
         pending_ref          => \$self->{pending_req},
         request_timeout      => $self->request_timeout,
     );

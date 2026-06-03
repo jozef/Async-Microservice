@@ -93,9 +93,9 @@ has 'jsonp' => (
     required => 1,
 );
 has 'using_frontend_proxy' => (
-    is      => 'ro',
-    isa     => 'Bool',
-    default => sub { $ENV{USING_FRONTEND_PROXY} // 0 },
+    is       => 'ro',
+    isa      => 'Bool',
+    required => 1,
 );
 has 'server_host' => (
     is       => 'ro',
@@ -588,8 +588,6 @@ Send redirect.
 =head2 using_frontend_proxy
 
 Controls whether proxy-forwarded headers are trusted for base URL parsing.
-
-Defaults to C<< $ENV{USING_FRONTEND_PROXY} // 0 >>.
 
 When true, C<http_host>, C<http_port>, and C<http_schema> are parsed from
 forwarded headers. If forwarded host headers are missing, parsing falls back

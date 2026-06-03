@@ -48,7 +48,7 @@ has 'static_path' => ( is => 'ro', isa => 'Str', default => 'static' );
 has 'using_frontend_proxy' => (
     is      => 'ro',
     isa     => 'Bool',
-    default => 0,
+    default => sub { $ENV{USING_FRONTEND_PROXY} // 0 },
 );
 
 has 'router' => (
@@ -308,6 +308,14 @@ See L<https://time.meon.eu/> and the code in L<Async::Microservice::Time>.
 
 URL path prefix for OpenAPI files. Defaults to C<'static'>. Can be overridden
 by passing it to the constructor.
+
+=head2 using_frontend_proxy
+
+Controls whether proxy-forwarded headers are trusted for base URL parsing.
+
+Defaults to C<< $ENV{USING_FRONTEND_PROXY} // 0 >>.
+
+See L<Async::MicroserviceReq/using_frontend_proxy> for more details.
 
 =head2 file_placeholder
 

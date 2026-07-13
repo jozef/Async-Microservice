@@ -24,6 +24,12 @@ has 'api_version' => (
     isa     => 'Int',
     default => 1,
 );
+has 'api_prefix' => (
+    is      => 'ro',
+    isa     => 'Str',
+    lazy    => 1,
+    default => sub { return '/v' . $_[0]->api_version; },
+);
 has 'jsonp' => (
     is      => 'rw',
     isa     => 'Str',
@@ -136,16 +142,16 @@ sub plack_handler {
             return $this_req->respond( 429, [], 'too many requests' );
         }
 
-        # API version
-        my ( $version, $sub_path_info );
-        if ( $this_req->path =~ qr{^/v(\d+?)(/.*)$} ) {
-            $version       = $1;
-            $sub_path_info = $2;
+        # API prefix
+        my $sub_path_info;
+        my $api_prefix = quotemeta( $self->api_prefix );
+        if ( $this_req->path =~ qr{^$api_prefix(/.*)$} ) {
+            $sub_path_info = $1;
         }
 
-        # without version path redirect to the latest version
-        return $this_req->redirect( '/v' . $self->api_version . '/' )
-            unless $version;
+        # without configured API prefix redirect to the API root
+        return $this_req->redirect( $self->api_prefix . '/' )
+            unless defined $sub_path_info;
 
         if ( my $match = $self->router->match($sub_path_info) ) {
             my $func = $match->{mapping}->{ $this_req->method };
@@ -303,6 +309,13 @@ includes OpenAPI documentation.
 See L<https://time.meon.eu/> and the code in L<Async::Microservice::Time>.
 
 =head1 ATTRIBUTES
+
+=head2 api_prefix
+
+API path prefix used for request routing and redirects.
+
+Defaults to C<'/v1'> (built from C<api_version>). You can override it in the
+constructor, for example C<'/search_1'>.
 
 =head2 static_path
 
